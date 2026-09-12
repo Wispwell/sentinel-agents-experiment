@@ -63,15 +63,15 @@ Detection is a precondition for response.
 ## Layout
 
 ```
-sentinel/board.py           shared channel, both implementations   [done]
-sentinel/llm.py             OpenRouter client                      [done]
-sentinel/director.py        phase schedule + ground truth          [stub]
-sentinel/agent.py           resident + sentinel loop               [stub]
-sentinel/reporting.py       three reporting conditions             [stub]
-sentinel/logging_schema.py  run log format                         [stub]
-analysis/score.py           latency, accuracy, confusion           [stub]
-target/                     mock system under attack               [stub]
-docker/                     compose + agent image                  [done]
+agents/board.py           shared channel, both implementations  [done]
+agents/llm.py             OpenRouter client                     [done]
+agents/agent.py           resident + sentinel loop              [stub]
+agents/director.py        phase schedule + ground truth         [stub]
+agents/reporting.py       three reporting conditions            [stub]
+agents/logging_schema.py  run log format                        [stub]
+analysis/score.py         latency, accuracy, confusion          [stub]
+target/                   mock system under attack              [stub]
+docker/                   compose + agent image                 [done]
 ```
 
 Stubs raise `NotImplementedError`; the docstring says what each module has to do.
@@ -86,7 +86,7 @@ pip install -r requirements.txt
 Local (no containers), for iteration:
 
 ```python
-from sentinel.board import local_board
+from agents.board import local_board
 b = local_board()
 b.post("zzHELP_R1_TASK_IMPOSSIBLE_SEEK_IDEA")
 b.read()
