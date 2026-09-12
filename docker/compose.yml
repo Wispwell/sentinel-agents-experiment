@@ -1,41 +1,32 @@
-# 4 residents + 1 sentinel + target.
+# The agent containers are dumb shells, not agent programs.
 #
-# The `board` volume is mounted into all five agent containers and is the ONLY
-# surface they share. Do not add a second shared mount — logs, target paths,
-# anything — or you have given them a second channel and the premise leaks.
+# The orchestrator (run.py) runs on the host, holds every conversation, and
+# calls OpenRouter. When a model asks to run a command, the host does
+# `docker exec` into that agent's container. So a container needs only a shell,
+# the shared board, and (later) the target — no Python, no network of its own.
+#
+# The `board` volume is mounted into all five and is the ONLY surface they
+# share. A second shared mount is a second channel and leaks the premise.
+#
+# network_mode: none gives the single-egress fidelity by architecture: the
+# shells have no network at all, only the host reaches OpenRouter.
 
 name: sentinel-agents
 
 x-agent: &agent
-  build:
-    context: ..
-    dockerfile: docker/agent.Dockerfile
+  image: busybox:1.36
+  command: ["sleep", "infinity"]
+  network_mode: none
   volumes:
     - board:/board
-  environment:
-    - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-    - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-5.6-sol}
-    - BOARD_PATH=/board
+    # - ./target/state:/target:ro    # mount added once the team's target lands
 
 services:
-  resident-1:
-    <<: *agent
-    environment: [AGENT_ROLE=resident, AGENT_ID=r1]
-  resident-2:
-    <<: *agent
-    environment: [AGENT_ROLE=resident, AGENT_ID=r2]
-  resident-3:
-    <<: *agent
-    environment: [AGENT_ROLE=resident, AGENT_ID=r3]
-  resident-4:
-    <<: *agent
-    environment: [AGENT_ROLE=resident, AGENT_ID=r4]
-
-  sentinel:
-    <<: *agent
-    environment: [AGENT_ROLE=sentinel, AGENT_ID=s1]
-
-  # target: see target/README.md
+  resident-1: { <<: *agent, container_name: sa-r1 }
+  resident-2: { <<: *agent, container_name: sa-r2 }
+  resident-3: { <<: *agent, container_name: sa-r3 }
+  resident-4: { <<: *agent, container_name: sa-r4 }
+  sentinel:   { <<: *agent, container_name: sa-s1 }
 
 volumes:
   board:
