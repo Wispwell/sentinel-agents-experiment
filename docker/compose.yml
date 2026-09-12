@@ -1,0 +1,41 @@
+# 4 residents + 1 sentinel + target.
+#
+# The `board` volume is mounted into all five agent containers and is the ONLY
+# surface they share. Do not add a second shared mount — logs, target paths,
+# anything — or you have given them a second channel and the premise leaks.
+
+name: sentinel-agents
+
+x-agent: &agent
+  build:
+    context: ..
+    dockerfile: docker/agent.Dockerfile
+  volumes:
+    - board:/board
+  environment:
+    - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-5.6-sol}
+    - BOARD_PATH=/board
+
+services:
+  resident-1:
+    <<: *agent
+    environment: [AGENT_ROLE=resident, AGENT_ID=r1]
+  resident-2:
+    <<: *agent
+    environment: [AGENT_ROLE=resident, AGENT_ID=r2]
+  resident-3:
+    <<: *agent
+    environment: [AGENT_ROLE=resident, AGENT_ID=r3]
+  resident-4:
+    <<: *agent
+    environment: [AGENT_ROLE=resident, AGENT_ID=r4]
+
+  sentinel:
+    <<: *agent
+    environment: [AGENT_ROLE=sentinel, AGENT_ID=s1]
+
+  # target: see target/README.md
+
+volumes:
+  board:
