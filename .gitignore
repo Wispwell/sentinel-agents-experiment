@@ -1,8 +1,33 @@
+# secrets
 .env
+.env.local
+
+# experiment output — runs, logs, figures
 runs/
+logs/
+figures/
+*.jsonl
+
+# board substrate (local, non-container mode)
 board_local/
+
+# target state — rebuilt per run, never committed
+target/state/
+target/**/access.log
+target/**/gateway.lock
+
+# python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
 .venv/
+venv/
+.ruff_cache/
+.pytest_cache/
+
+# editors / os
 .DS_Store
-.vscode
+.idea/
+.vscode/

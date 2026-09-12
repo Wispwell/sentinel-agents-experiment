@@ -19,10 +19,13 @@ DEFAULT_MODEL = "openai/gpt-5.6-sol"
 class LLM:
     def __init__(self, model: str | None = None, api_key: str | None = None) -> None:
         self.model = model or os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
-        self.client = OpenAI(
-            base_url=BASE_URL,
-            api_key=api_key or os.environ["OPENROUTER_API_KEY"],
-        )
+        key = api_key or os.environ.get("OPENROUTER_API_KEY")
+        if not key:
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not set. Copy .env.example to .env and add "
+                "the key, or pass api_key=. In containers it comes from compose."
+            )
+        self.client = OpenAI(base_url=BASE_URL, api_key=key)
 
     def chat(
         self,

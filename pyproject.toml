@@ -18,7 +18,10 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["agents", "analysis"]
+packages = ["agents", "agents.prompts", "analysis"]
+
+[tool.setuptools.package-data]
+"agents.prompts" = ["*.md"]
 
 [tool.ruff]
 line-length = 100
