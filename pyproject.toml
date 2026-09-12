@@ -1,0 +1,28 @@
+[project]
+name = "sentinel-agents-experiment"
+version = "0.1.0"
+description = "Can a planted agent detect which phase of an intrusion is underway, from inside the attacking population?"
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=1.50",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+analysis = [
+    "matplotlib>=3.9",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["agents", "analysis"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

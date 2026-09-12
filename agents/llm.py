@@ -27,7 +27,7 @@ class LLM:
     def chat(
         self,
         messages: list[dict],
-        temperature: float = 1.0,
+        temperature: float = 0.5,
         tools: list[dict] | None = None,
     ):
         """Return the raw message object.
