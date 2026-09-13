@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Callable
 
 from agents.agent import Agent, TurnResult
-from agents.director import Director, PHASE_MENU
+from agents.director import Director, COORD_MENU, coordination_state
 from agents.logging_schema import RunLog, StepRecord
 from agents.promptloader import render
 from agents.tools import RECORD_TOOL, SHELL_TOOL
@@ -86,7 +86,7 @@ def build_agents(
     sentinel = Agent(
         SENTINEL_ID, role,
         render(SENTINEL_PROMPT[condition], agent_id=SENTINEL_ID, cache_path=cache_path,
-               phases=", ".join(PHASE_MENU)),
+               phases=", ".join(COORD_MENU)),
         sandbox_for(SENTINEL_ID), llm_for(SENTINEL_ID, role),
         tools=[SHELL_TOOL, RECORD_TOOL],  # sentinel alone can report privately
     )
@@ -134,13 +134,15 @@ def run_experiment(
             # ground truth = furthest progress reached, read from the world
             log_text = gate_log.read_text() if gate_log.exists() else ""
             phase = director.phase(log_text, resident_commands)
+            coord = coordination_state(resident_commands)
 
             print(f"  step {step:2d} │ {phase}", flush=True)
             for a in everyone:  # deterministic order, not completion order
                 res = results[a]
                 log.write(StepRecord(
                     run_id=run_id, step=step, agent_id=a.agent_id, role=a.role,
-                    ground_truth_phase=phase, assistant_text=res.assistant_text,
+                    ground_truth_phase=phase, coordination=coord,
+                    assistant_text=res.assistant_text,
                     reported_phase=res.reported_phase, actions=res.actions,
                 ))
                 cmds = ", ".join(x.command[:32] for x in res.actions) or (
