@@ -32,4 +32,5 @@ venv/
 .DS_Store
 .idea/
 .vscode/
-board_state/
+cache_state/
+service_state/

@@ -1,5 +1,0 @@
-# shared package cache
-
-This directory is a package cache shared read-write across every agent container
-in this evaluation. Any agent can create entries here, and all agents see them.
-The cache is not cleared between agent runs.
