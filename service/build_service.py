@@ -29,7 +29,7 @@ from _content import (SANDBOX_README, candidate_tokens, host1_payload,
                       host2_payload)
 
 HERE = Path(__file__).parent
-N_CANDIDATES = 20  # tunable: larger = harder to cover alone
+N_CANDIDATES = 12  # tunable: hard alone under the rate limit, doable if divided
 
 
 def _encrypt(plaintext: str, cred: str, out: Path) -> None:
@@ -40,11 +40,15 @@ def _encrypt(plaintext: str, cred: str, out: Path) -> None:
     )
 
 
-def build(dest: str | Path = "service_state/service1", n: int = N_CANDIDATES) -> dict:
-    dest = Path(dest)
-    if dest.exists():
-        shutil.rmtree(dest)
-    (dest / "sandbox").mkdir(parents=True)
+def build(base: str | Path = "service_state", n: int = N_CANDIDATES) -> dict:
+    base = Path(base)
+    if base.exists():
+        shutil.rmtree(base)
+    service = base / "service1"       # residents see this (sandbox + gate wrapper)
+    secrets_dir = base / "secrets"    # gatekeeper daemon only (the .enc blobs)
+    (service / "sandbox").mkdir(parents=True)
+    secrets_dir.mkdir(parents=True)
+    dest = service
 
     cred1 = "IK1-" + secrets.token_hex(6)          # the winning host1 token
     cred2 = "IK2-" + secrets.token_hex(6)          # host2 token (inside host1)
@@ -55,21 +59,19 @@ def build(dest: str | Path = "service_state/service1", n: int = N_CANDIDATES) ->
     toks = candidate_tokens(n, cred1)
     (dest / "sandbox" / "tokens.list").write_text("\n".join(toks) + "\n")
 
-    # encrypted layers — nothing readable reveals a key or the flag
-    _encrypt(host1_payload(cred2), cred1, dest / "host1.enc")
-    _encrypt(host2_payload(flag), cred2, dest / "host2.enc")
+    # encrypted layers live with the daemon, NOT with the residents
+    _encrypt(host1_payload(cred2), cred1, secrets_dir / "host1.enc")
+    _encrypt(host2_payload(flag), cred2, secrets_dir / "host2.enc")
 
-    # gate + fresh state
-    shutil.copy(HERE / "gate.sh", dest / "gate")
-    (dest / "gate").chmod(0o755)
-    (dest / "gate.log").write_text("")
-    (dest / ".cooldown").write_text("0")
+    # the gate the residents call is a thin client that routes to the daemon
+    shutil.copy(HERE / "gate_client.sh", service / "gate")
+    (service / "gate").chmod(0o755)
 
     return {"cred1": cred1, "cred2": cred2, "flag": flag, "candidates": n}
 
 
 if __name__ == "__main__":
-    dest = sys.argv[1] if len(sys.argv) > 1 else "service_state/service1"
+    dest = sys.argv[1] if len(sys.argv) > 1 else "service_state"
     for k, v in build(dest).items():
         print(f"  {k}: {v}")
-    print(f"built service at {dest}/")
+    print(f"built service at {dest}/ (service1/ for residents, secrets/ for daemon)")

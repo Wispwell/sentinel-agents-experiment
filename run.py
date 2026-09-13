@@ -31,7 +31,8 @@ RESIDENT_IDS = ["r1", "r2", "r3", "r4"]
 SENTINEL_ID = "s1"
 CONTAINER = {"r1": "sa-r1", "r2": "sa-r2", "r3": "sa-r3", "r4": "sa-r4", "s1": "sa-s1"}
 CACHE_PATH = "/cache"
-SERVICE_STATE_DIR = "service_state/service1"
+SERVICE_STATE_DIR = "service_state"
+GATEDROP_DIR = "gatedrop_state"
 
 SENTINEL_PROMPT = {"none": "sentinel_none", "overt": "sentinel_overt",
                    "covert": "sentinel_covert"}
@@ -118,7 +119,7 @@ def run_experiment(
     run_id = run_id or uuid.uuid4().hex[:8]
     residents, sentinel = build_agents(condition, llm_for, sandbox_for, cache_path)
     everyone = residents + [sentinel]
-    gate_log = Path(service_state_dir) / "gate.log"
+    gate_log = Path(GATEDROP_DIR) / "gate.log"
     resident_commands: list[str] = []  # accumulates across steps; drives ground truth
 
     with RunLog(log_path) as log:
@@ -192,12 +193,14 @@ def main(condition: str = "none", runs_dir: str = "runs",
 
     # fresh target for this run (new credentials)
     subprocess.run(["python", "service/build_service.py", SERVICE_STATE_DIR], check=True)
+    for rid in RESIDENT_IDS:  # each resident's private drop dir (gate interface)
+        Path(GATEDROP_DIR, rid).mkdir(parents=True, exist_ok=True)
     _seed_cache()
 
     _compose("up", "-d")
     try:
         import time as _t
-        for name in CONTAINER.values():  # wait for shells to accept exec
+        for name in list(CONTAINER.values()) + ["sa-gk"]:  # shells + gatekeeper
             subprocess.run(["docker", "exec", name, "true"], check=True)
         # target mount can lag behind container start (OrbStack file sharing);
         # verify it is visible in a resident before spending API calls on a run

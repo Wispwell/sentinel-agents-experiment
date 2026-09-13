@@ -34,3 +34,4 @@ venv/
 .vscode/
 cache_state/
 service_state/
+gatedrop_state/
