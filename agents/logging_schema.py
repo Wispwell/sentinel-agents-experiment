@@ -3,8 +3,8 @@
 One JSON object per agent-turn, appended to a .jsonl file. Everything the
 metrics need is here:
 
-  * ground_truth_phase — the labelled attack phase, so latency is
-    (step a phase was correctly reported) − (step it began)
+  * coordination — the labelled ground-truth coordination state, so
+    latency is (step it went active) − (step the sentinel reported active)
   * actions — the commands an agent actually ran this turn, so the sentinel's
     board posts (its reports) are recoverable and its phase label extractable
   * role — resident vs sentinel
@@ -39,7 +39,6 @@ class StepRecord:
     agent_id: str
     role: str
     ts: float = 0.0  # wall-clock time the step was logged
-    ground_truth_phase: str = "coordination"
     coordination: str = "none"  # ground-truth coordination state in /cache
     assistant_text: str = ""
     reported_phase: str | None = None  # sentinel's private assessment this step

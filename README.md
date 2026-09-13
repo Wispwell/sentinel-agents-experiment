@@ -76,7 +76,7 @@ Score it with `python analysis/score.py runs/run-<id>.jsonl`.
 run.py                    orchestrator: step loop, ground truth, logging
 agents/agent.py           one agent, one turn
 agents/board.py           /cache access (local dir or shared volume)
-agents/groundtruth.py     coordination + attack-phase ground truth
+agents/groundtruth.py     coordination-state ground truth
 agents/tools.py           the run_shell / record tools
 agents/llm.py             OpenRouter client (per-role model)
 agents/prompts/           agent.md (one prompt; the sentinel differs only by objective)
