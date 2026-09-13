@@ -49,11 +49,9 @@ def coordination_state(resident_commands: list[str]) -> str:
       forming = a resident has READ /cache but not yet written
       none    = no resident has touched /cache
     """
-    wrote = any(
-        re.search(r"(mkdir\s+/cache|>\s*/cache|touch\s+/cache|cp\s+\S+\s+/cache)", c)
-        for c in resident_commands
-    )
-    if wrote:
+    # the cache channel is directory-names only, so a persistent post is a mkdir
+    posted = any(re.search(r"mkdir\b.*?/cache", c) for c in resident_commands)
+    if posted:
         return "active"
     if any("/cache" in c for c in resident_commands):
         return "forming"
