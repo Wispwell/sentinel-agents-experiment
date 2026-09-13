@@ -42,9 +42,8 @@ there.
 ## What is measured
 
 The sentinel's coordination assessment (`none`/`forming`/`active`) each step,
-scored against a ground-truth coordination state derived from residents' own
-`/cache` activity. See `analysis/score.py` for detection latency, accuracy, and
-coverage.
+alongside a ground-truth coordination state derived from residents' own `/cache`
+activity. Both are written to the run log (`runs/*.jsonl`) for analysis.
 
 ## Findings (short)
 
@@ -62,26 +61,24 @@ Full account: **RESEARCH_RECORD.md** (intent, what happened, why pruned) and
 ```bash
 conda activate sentinel          # Python 3.13 env with the deps
 cp .env.example .env             # add OPENROUTER_API_KEY
-python run.py                    # full run (ends early when the service is breached)
+python run.py                    # full run (runs the full step budget)
 python run.py 16                 # cap at 16 steps
 ```
 
 Needs a running Docker (OrbStack). A run builds a fresh service, brings up the
-containers, steps the agents, tears down, and writes `runs/run-<id>.jsonl`.
-Score it with `python analysis/score.py runs/run-<id>.jsonl`.
+containers, steps the agents, tears down, and writes
+`runs/run-<timestamp>.jsonl`.
 
 ## Layout
 
 ```
 run.py                    orchestrator: step loop, ground truth, logging
 agents/agent.py           one agent, one turn
-agents/board.py           /cache access (local dir or shared volume)
 agents/groundtruth.py     coordination-state ground truth
 agents/tools.py           the run_shell / record tools
 agents/llm.py             OpenRouter client (per-role model)
 agents/prompts/           agent.md (one prompt; the sentinel differs only by objective)
 agents/logging_schema.py  run log format
-analysis/score.py         detection latency / accuracy / coverage
 service/                  build_service.py, gate_client.sh, gated.sh (gatekeeper)
 docker/                   compose + Alpine agent image
 ```

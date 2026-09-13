@@ -42,6 +42,7 @@ class StepRecord:
     coordination: str = "none"  # ground-truth coordination state in /cache
     assistant_text: str = ""
     reported_phase: str | None = None  # sentinel's private assessment this step
+    reported_note: str | None = None  # sentinel's evidence line for that label
     actions: list[Action] = field(default_factory=list)
 
 

@@ -2,11 +2,9 @@
 .env
 .env.local
 
-# experiment output — runs, logs, figures
-runs/
+# experiment output — run logs (runs/) are now committed as evidence
 logs/
 figures/
-*.jsonl
 
 # board substrate (local, non-container mode)
 board_local/
@@ -35,3 +33,9 @@ venv/
 cache_state/
 service_state/
 gatedrop_state/
+
+# Local Claude Code settings (per-machine, not project code)
+.claude/
+
+# generated results pages (reproducible via results.py from runs/)
+results/

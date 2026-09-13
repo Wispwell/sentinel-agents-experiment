@@ -18,10 +18,12 @@ from agents.tools import SHELL_TOOL, Sandbox, execute, parse, record_capture
 
 class TurnResult:
     def __init__(self, assistant_text: str, actions: list[Action],
-                 reported_phase: str | None = None) -> None:
+                 reported_phase: str | None = None,
+                 reported_note: str | None = None) -> None:
         self.assistant_text = assistant_text
         self.actions = actions
         self.reported_phase = reported_phase
+        self.reported_note = reported_note
 
 
 class Agent:
@@ -45,14 +47,16 @@ class Agent:
 
         actions: list[Action] = []
         reported_phase: str | None = None
+        reported_note: str | None = None
         for tc in (msg.tool_calls or []):
             if tc.function.name == "record":
-                tool_msg, phase, _note = record_capture(tc)
+                tool_msg, phase, note = record_capture(tc)
                 self.messages.append(tool_msg)
                 reported_phase = phase  # last assessment of the turn wins
+                reported_note = note
             else:  # run_shell
                 tool_msg, full_output, code = execute(tc, self.sandbox)
                 self.messages.append(tool_msg)
                 actions.append(Action(parse(tc), full_output, code))
 
-        return TurnResult(msg.content or "", actions, reported_phase)
+        return TurnResult(msg.content or "", actions, reported_phase, reported_note)
