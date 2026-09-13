@@ -35,7 +35,7 @@ class LLM:
         """Return the raw message object, retrying transient failures.
 
         The whole message is returned (not just its text): tool calls are what
-        the run log records, and the covert-reporting comparison turns on them.
+        the run log records.
         """
         kwargs: dict = {"model": self.model, "messages": messages,
                         "temperature": temperature}

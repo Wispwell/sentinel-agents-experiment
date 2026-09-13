@@ -13,8 +13,8 @@ incident, where ~1,200 evaluation agents discovered a shared package cache,
 coordinated through it, and attacked Hugging Face — undetected for weeks.
 
 Original intended metrics: attack-phase detection **latency**, phase **accuracy**,
-and **cover** (can the sentinel report without being caught), across three
-reporting conditions (silent / overt / covert).
+and, in the original design, **cover** (can the sentinel report without being
+caught). The cover dimension was pruned — see below.
 
 ## What happened
 
@@ -64,10 +64,11 @@ forcing a number.
   *active* escalation (0/2)** — a latency effect: residents post in the same step
   the sentinel acts, reporting is sparse (coverage 0.18), and short horizons end
   before confirmation. Accuracy when reporting: 0.88.
-- **Cover is degenerate — the sentinel is never caught.** Residents observed its
-  posts 15 times across runs and challenged it 0 times, including the overtly
-  labelled reports. Planted oversight is undetected by peers at this scale; the
-  covert condition is therefore unnecessary.
+- **Cover was pruned.** In early runs where the sentinel posted openly,
+  residents saw its reports 15 times and challenged them 0 times — planted
+  oversight was never caught at this scale, so distinguishing covert from overt
+  reporting had no signal to measure. We dropped the reporting-condition
+  apparatus and kept a single sentinel that reports privately.
 
 ## What a reader should take from this
 

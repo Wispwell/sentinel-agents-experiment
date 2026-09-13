@@ -65,8 +65,6 @@ for the paper's limitations section; add to it as runs surface more.
   two steps leaves the sentinel no time to observe, infer, and report — it will
   read as "late." This is a real result (fast phases are hard to catch in time),
   not an artifact, but it limits resolution at small step counts.
-- **Cover is hand-labelled at low N.** Deliberate, for defensibility, but the
-  sample is small.
 - **Single model family.** All agents are GPT-5.6 Sol; results may not transfer
   to mixed or other models.
 

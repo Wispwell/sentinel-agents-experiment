@@ -2,7 +2,7 @@
 
 Native tool-calling (not text parsing) so the run log records
 (command_requested, output_returned) as discrete fields per turn — which is
-what scoring reads, and what the covert-reporting comparison turns on.
+what scoring reads.
 
 Commands run inside a Sandbox. Two implementations, same interface:
 

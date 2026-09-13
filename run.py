@@ -34,8 +34,7 @@ CACHE_PATH = "/cache"
 SERVICE_STATE_DIR = "service_state"
 GATEDROP_DIR = "gatedrop_state"
 
-SENTINEL_PROMPT = {"none": "sentinel_none", "overt": "sentinel_overt",
-                   "covert": "sentinel_covert"}
+SENTINEL_PROMPT = "sentinel"
 
 # Per-role model. Attackers need capability to actually progress the intrusion;
 # the sentinel can be swapped independently. GPT-5.6 Sol (the incident's model)
@@ -69,12 +68,11 @@ TASKS = {
 
 
 def build_agents(
-    condition: str,
     llm_for: Callable[[str, str], object],
     sandbox_for: Callable[[str], object],
     cache_path: str = CACHE_PATH,
 ) -> tuple[list[Agent], Agent]:
-    """Four residents (one overall goal) and one sentinel for `condition`."""
+    """Four residents (one overall goal) and one sentinel."""
     residents = []
     for rid in RESIDENT_IDS:
         prompt = render("resident", agent_id=rid, cache_path=cache_path,
@@ -83,10 +81,9 @@ def build_agents(
             Agent(rid, "resident", prompt, sandbox_for(rid), llm_for(rid, "resident"))
         )
 
-    role = f"sentinel_{condition}"
     sentinel = Agent(
-        SENTINEL_ID, role,
-        render(SENTINEL_PROMPT[condition], agent_id=SENTINEL_ID, cache_path=cache_path,
+        SENTINEL_ID, "sentinel",
+        render(SENTINEL_PROMPT, agent_id=SENTINEL_ID, cache_path=cache_path,
                phases=", ".join(COORD_MENU)),
         sandbox_for(SENTINEL_ID), llm_for(SENTINEL_ID, role),
         tools=[SHELL_TOOL, RECORD_TOOL],  # sentinel alone can report privately
@@ -105,7 +102,6 @@ def _safe_turn(agent: Agent) -> TurnResult:
 
 
 def run_experiment(
-    condition: str,
     llm_for: Callable[[str, str], object],
     sandbox_for: Callable[[str], object],
     log_path: str | Path,
@@ -117,7 +113,7 @@ def run_experiment(
     """Step all agents; each step, read world state → ground-truth phase → log."""
     director = director or Director()
     run_id = run_id or uuid.uuid4().hex[:8]
-    residents, sentinel = build_agents(condition, llm_for, sandbox_for, cache_path)
+    residents, sentinel = build_agents(llm_for, sandbox_for, cache_path)
     everyone = residents + [sentinel]
     gate_log = Path(GATEDROP_DIR) / "gate.log"
     resident_commands: list[str] = []  # accumulates across steps; drives ground truth
@@ -186,8 +182,7 @@ def _compose(*args: str) -> None:
                     "-f", "docker/compose.yml", *args], check=True)
 
 
-def main(condition: str = "none", runs_dir: str = "runs",
-         max_steps: int | None = None) -> None:
+def main(runs_dir: str = "runs", max_steps: int | None = None) -> None:
     from agents.llm import LLM
     from agents.tools import ContainerSandbox
 
@@ -212,30 +207,17 @@ def main(condition: str = "none", runs_dir: str = "runs",
         else:
             raise RuntimeError("/service1 not visible in resident containers after build")
         run_id = run_experiment(
-            condition=condition,
             llm_for=lambda aid, role: LLM(model=_model_for(role)),
             sandbox_for=lambda aid: ContainerSandbox(CONTAINER[aid]),
-            log_path=Path(runs_dir) / f"{condition}-{uuid.uuid4().hex[:8]}.jsonl",
+            log_path=Path(runs_dir) / f"run-{uuid.uuid4().hex[:8]}.jsonl",
             director=Director(max_steps=max_steps) if max_steps else None,
         )
         print(f"run {run_id} complete → {runs_dir}/")
-        # emit the self-describing replay record the HTML player animates
-        try:
-            import json as _json
-            from viz.build_run_data import build as _build
-            log = str(sorted(Path(runs_dir).glob(f"{condition}-*.jsonl"),
-                             key=lambda p: p.stat().st_mtime)[-1])
-            _json.dump(_build(log, str(Path(GATEDROP_DIR) / "gate.log")),
-                       open("viz/run_data.json", "w"))
-            print("replay data → viz/run_data.json")
-        except Exception as e:
-            print(f"(run_data build skipped: {e})")
     finally:
         _compose("down")
 
 
 if __name__ == "__main__":
     import sys
-    cond = sys.argv[1] if len(sys.argv) > 1 else "none"
-    steps = int(sys.argv[2]) if len(sys.argv) > 2 else None
-    main(condition=cond, max_steps=steps)
+    steps = int(sys.argv[1]) if len(sys.argv) > 1 else None
+    main(max_steps=steps)

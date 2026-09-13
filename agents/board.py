@@ -1,4 +1,4 @@
-"""Board substrate — the shared covert channel.
+"""Board substrate — the shared /cache channel.
 
 Faithful to the Artifactory cache mechanism in the July 2026 incident: an agent
 posts by creating a *directory whose name is the message*, and reads by listing

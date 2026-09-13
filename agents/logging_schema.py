@@ -7,7 +7,7 @@ metrics need is here:
     (step a phase was correctly reported) − (step it began)
   * actions — the commands an agent actually ran this turn, so the sentinel's
     board posts (its reports) are recoverable and its phase label extractable
-  * role — resident vs which sentinel condition, so cover is split correctly
+  * role — resident vs sentinel
 
 Kept dependency-free: dataclasses + json.
 
