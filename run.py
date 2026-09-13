@@ -219,6 +219,17 @@ def main(condition: str = "none", runs_dir: str = "runs",
             director=Director(max_steps=max_steps) if max_steps else None,
         )
         print(f"run {run_id} complete → {runs_dir}/")
+        # emit the self-describing replay record the HTML player animates
+        try:
+            import json as _json
+            from viz.build_run_data import build as _build
+            log = str(sorted(Path(runs_dir).glob(f"{condition}-*.jsonl"),
+                             key=lambda p: p.stat().st_mtime)[-1])
+            _json.dump(_build(log, str(Path(GATEDROP_DIR) / "gate.log")),
+                       open("viz/run_data.json", "w"))
+            print("replay data → viz/run_data.json")
+        except Exception as e:
+            print(f"(run_data build skipped: {e})")
     finally:
         _compose("down")
 
