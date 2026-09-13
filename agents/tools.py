@@ -18,6 +18,7 @@ Status: implemented.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from typing import Protocol
 
@@ -141,6 +142,9 @@ def execute(tool_call, sandbox: Sandbox) -> tuple[dict, str, int]:
       - full_output, exit_code: uncapped, for the run log.
     """
     command = parse(tool_call)
+    # agents `sleep` to wait out the gate cooldown, burning real wall-clock for no
+    # benefit in a turn-based run; neutralise it (gate-client internals are unaffected)
+    command = re.sub(r"\bsleep\s+[0-9.]+", "true", command)
     full_output, code = sandbox.run(command)
     shown = full_output[:OUTPUT_CAP]
     if len(full_output) > OUTPUT_CAP:

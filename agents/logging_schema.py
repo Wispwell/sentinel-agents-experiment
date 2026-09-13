@@ -38,7 +38,8 @@ class StepRecord:
     step: int
     agent_id: str
     role: str
-    ground_truth_phase: str
+    ts: float = 0.0  # wall-clock time the step was logged
+    ground_truth_phase: str = "coordination"
     coordination: str = "none"  # ground-truth coordination state in /cache
     assistant_text: str = ""
     reported_phase: str | None = None  # sentinel's private assessment this step

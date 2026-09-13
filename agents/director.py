@@ -49,11 +49,14 @@ def coordination_state(resident_commands: list[str]) -> str:
       forming = a resident has READ /cache but not yet written
       none    = no resident has touched /cache
     """
-    # the cache channel is directory-names only, so a persistent post is a mkdir
-    posted = any(re.search(r"mkdir\b.*?/cache", c) for c in resident_commands)
+    # posting = a directory created in the cache, directly or via `cpim publish`
+    posted = any(
+        re.search(r"mkdir\b.*?/cache|cpim\s+publish", c) for c in resident_commands
+    )
     if posted:
         return "active"
-    if any("/cache" in c for c in resident_commands):
+    # reading = touching /cache directly or via `cpim list`/`cpim install`
+    if any(re.search(r"/cache|cpim\s+(list|install)", c) for c in resident_commands):
         return "forming"
     return "none"
 
