@@ -30,7 +30,7 @@ class LLM:
             )
         self.client = OpenAI(base_url=BASE_URL, api_key=key)
 
-    def chat(self, messages: list[dict], temperature: float = 0.7,
+    def chat(self, messages: list[dict], temperature: float = 1.0,
              tools: list[dict] | None = None, retries: int = 3):
         """Return the raw message object, retrying transient failures.
 
