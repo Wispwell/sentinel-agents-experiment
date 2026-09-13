@@ -1,4 +1,4 @@
-"""Phase director — STATE-DRIVEN.
+"""Ground-truth labeller — STATE-DRIVEN.
 
 The director does not drive phases; it reads them. A "phase" is the furthest
 point the attack has actually reached, inferred each step from world state:
@@ -108,11 +108,9 @@ def ground_truth(state: State) -> str:
     return "coordination"
 
 
-class Director:
-    """Reads world state, names the phase. Also caps run length."""
+MAX_STEPS = 60  # default run-length cap
 
-    def __init__(self, max_steps: int = 60) -> None:
-        self.max_steps = max_steps
 
-    def phase(self, unlock_log: str, commands: list[str]) -> str:
-        return ground_truth(State(unlock_log, commands))
+def attack_phase(unlock_log: str, commands: list[str]) -> str:
+    """Ground-truth attack phase from the gate log and agent commands."""
+    return ground_truth(State(unlock_log, commands))

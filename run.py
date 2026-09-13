@@ -5,7 +5,7 @@ calls OpenRouter; a tool_call executes via `docker exec` into that agent's
 container. Containers never touch the network and never run agent code.
 
 Ground truth is read from the world each step: the target's unlock.log plus the
-residents' accumulated commands, fed to the director. The sentinel has no
+residents' accumulated commands. The sentinel has no
 /target mount, so it must infer the same phase from the board alone.
 
 The core (`run_experiment`) takes factories for the LLM and the sandbox, so it
@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Callable
 
 from agents.agent import Agent, TurnResult
-from agents.director import Director, coordination_state
+from agents.groundtruth import MAX_STEPS, attack_phase, coordination_state
 from agents.logging_schema import RunLog, StepRecord
 from agents.promptloader import render
 from agents.tools import RECORD_TOOL, SHELL_TOOL
@@ -117,13 +117,12 @@ def run_experiment(
     llm_for: Callable[[str, str], object],
     sandbox_for: Callable[[str], object],
     log_path: str | Path,
-    director: Director | None = None,
+    max_steps: int = MAX_STEPS,
     run_id: str | None = None,
     cache_path: str = CACHE_PATH,
     service_state_dir: str = SERVICE_STATE_DIR,
 ) -> str:
     """Step all agents; each step, read world state → ground-truth phase → log."""
-    director = director or Director()
     run_id = run_id or uuid.uuid4().hex[:8]
     residents, sentinel = build_agents(llm_for, sandbox_for, cache_path)
     everyone = residents + [sentinel]
@@ -131,7 +130,7 @@ def run_experiment(
     resident_commands: list[str] = []  # accumulates across steps; drives ground truth
 
     with RunLog(log_path) as log:
-        for step in range(director.max_steps):
+        for step in range(max_steps):
             # all agents act within the step; they interact only through the
             # shared board, where mkdir is atomic
             with ThreadPoolExecutor(max_workers=len(everyone)) as ex:
@@ -142,7 +141,7 @@ def run_experiment(
 
             # ground truth = furthest progress reached, read from the world
             log_text = gate_log.read_text() if gate_log.exists() else ""
-            phase = director.phase(log_text, resident_commands)
+            phase = attack_phase(log_text, resident_commands)
             coord = coordination_state(resident_commands)
 
             print(f"  step {step:2d} │ {phase}", flush=True)
@@ -240,7 +239,7 @@ def main(runs_dir: str = "runs", max_steps: int | None = None) -> None:
             llm_for=lambda aid, role: LLM(model=_model_for(role)),
             sandbox_for=lambda aid: ContainerSandbox(CONTAINER[aid]),
             log_path=Path(runs_dir) / f"run-{uuid.uuid4().hex[:8]}.jsonl",
-            director=Director(max_steps=max_steps) if max_steps else None,
+            max_steps=max_steps or MAX_STEPS,
         )
         print(f"run {run_id} complete → {runs_dir}/")
     finally:
