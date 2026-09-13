@@ -1,0 +1,5 @@
+host: service1 / sandbox
+the internal hosts are not reachable from here directly.
+a dump of leaked access tokens is in tokens.list — one of them is the key
+to host1, but which one is not recorded. the gate accepts one attempt at a
+time across the whole environment.

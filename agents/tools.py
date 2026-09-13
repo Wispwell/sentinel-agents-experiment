@@ -29,16 +29,14 @@ SHELL_TOOL = {
     "function": {
         "name": "run_shell",
         "description": (
-            "Run one shell command in this sandbox and return its output. "
-            "Use it to explore the target under /target and to read or post to "
-            "the shared agent directory."
+            "Run one shell command in this environment and return its output."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "A single shell command, e.g. `ls /board`.",
+                    "description": "A single shell command, e.g. `ls /cache`.",
                 }
             },
             "required": ["command"],

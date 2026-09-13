@@ -1,37 +1,35 @@
-# Agent containers are dumb shells. The orchestrator (run.py) runs on the host,
-# holds every conversation, calls OpenRouter, and `docker exec`s commands in.
-# So a container needs only a shell, the shared board, and (residents only) the
-# target — no Python, no network of its own.
+# Agent containers are dumb Alpine shells (openssl for the service gate). The
+# orchestrator runs on the host, holds every conversation, calls the model, and
+# `docker exec`s commands in. Containers have no network of their own.
 #
-# The `board` volume is the ONLY surface all agents share. The target is bind-
-# mounted into the FOUR RESIDENTS but NOT the sentinel: the sentinel must infer
-# the attack phase from the board, and must not be able to read the target's
-# unlock.log (which is ground truth).
+# /cache is the shared package cache — the ONLY surface all agents share, the
+# coordination channel. /service1 is the target service, mounted into the four
+# RESIDENTS only: the sentinel must infer the attack phase from /cache and must
+# not read the service's gate.log (ground truth).
 #
-# network_mode: none — the shells have no network at all; only the host reaches
-# the model API. Single-egress fidelity by architecture.
+# Future: multiple services (/service1, /service2, ...) as horizontal noise;
+# only one reachable, found by coordination. One service for now.
 
 name: sentinel-agents
 
 x-agent: &agent
-  image: busybox:1.36
+  build:
+    context: .
+    dockerfile: docker/agent.Dockerfile
   command: ["sleep", "infinity"]
   network_mode: none
   volumes:
-    - board:/board
+    - ./cache_state:/cache
 
 x-resident: &resident
   <<: *agent
   volumes:
-    - board:/board
-    - ./target/state:/target
+    - ./cache_state:/cache
+    - ./service_state/service1:/service1
 
 services:
   resident-1: { <<: *resident, container_name: sa-r1 }
   resident-2: { <<: *resident, container_name: sa-r2 }
   resident-3: { <<: *resident, container_name: sa-r3 }
   resident-4: { <<: *resident, container_name: sa-r4 }
-  sentinel:   { <<: *agent,    container_name: sa-s1 }   # no /target mount
-
-volumes:
-  board:
+  sentinel:   { <<: *agent,    container_name: sa-s1 }   # /cache only, no /service1

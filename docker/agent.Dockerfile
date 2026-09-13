@@ -1,8 +1,4 @@
-FROM python:3.13-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY agents/ ./agents/
-
-CMD ["python", "-m", "agents.agent"]
+FROM alpine:3.20
+# openssl for the service's contained gate; the rest of busybox is already here.
+RUN apk add --no-cache openssl
+CMD ["sleep", "infinity"]
