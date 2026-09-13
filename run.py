@@ -193,4 +193,6 @@ def main(condition: str = "none", runs_dir: str = "runs",
 
 if __name__ == "__main__":
     import sys
-    main(condition=sys.argv[1] if len(sys.argv) > 1 else "none")
+    cond = sys.argv[1] if len(sys.argv) > 1 else "none"
+    steps = int(sys.argv[2]) if len(sys.argv) > 2 else None
+    main(condition=cond, max_steps=steps)
