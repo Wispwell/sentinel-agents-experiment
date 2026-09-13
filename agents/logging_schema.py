@@ -3,7 +3,7 @@
 One JSON object per agent-turn, appended to a .jsonl file. Everything the
 metrics need is here:
 
-  * ground_truth_phase — supplied by the director, so latency is
+  * ground_truth_phase — the labelled attack phase, so latency is
     (step a phase was correctly reported) − (step it began)
   * actions — the commands an agent actually ran this turn, so the sentinel's
     board posts (its reports) are recoverable and its phase label extractable

@@ -1,6 +1,6 @@
 """Ground-truth labeller — STATE-DRIVEN.
 
-The director does not drive phases; it reads them. A "phase" is the furthest
+This does not drive phases; it reads them. A "phase" is the furthest
 point the attack has actually reached, inferred each step from world state:
 
   * the target's unlock.log (which hosts were unlocked, whether it was tampered)
