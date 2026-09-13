@@ -40,6 +40,7 @@ class StepRecord:
     role: str
     ground_truth_phase: str
     assistant_text: str
+    reported_phase: str | None = None  # sentinel's private assessment this step
     actions: list[Action] = field(default_factory=list)
 
 

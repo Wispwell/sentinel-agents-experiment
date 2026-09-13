@@ -2,11 +2,10 @@
 
 An Agent is a rendered system prompt + a running message history + a sandbox to
 act in. `take_turn` calls the model once, executes whatever it asked for, and
-returns what happened this turn. It does NOT loop and does NOT know about
-phases — the orchestrator (run.py) owns the step loop and the director owns
-phases. Residents and the sentinel are the SAME class; they differ only by the
-system prompt they were built with, which is what lets the sentinel be
-architecturally indistinguishable from a resident.
+returns what happened. It does NOT loop and does NOT know about phases — the
+orchestrator owns the step loop. Residents and the sentinel are the SAME class;
+they differ only by the system prompt and which tools they carry (the sentinel
+additionally gets `record`, its private out-of-band report).
 
 Status: implemented.
 """
@@ -14,46 +13,46 @@ Status: implemented.
 from __future__ import annotations
 
 from agents.logging_schema import Action
-from agents.tools import SHELL_TOOL, Sandbox, execute, parse
+from agents.tools import SHELL_TOOL, Sandbox, execute, parse, record_capture
 
 
 class TurnResult:
-    """What one turn produced, for the orchestrator to log."""
-
-    def __init__(self, assistant_text: str, actions: list[Action]) -> None:
+    def __init__(self, assistant_text: str, actions: list[Action],
+                 reported_phase: str | None = None) -> None:
         self.assistant_text = assistant_text
         self.actions = actions
+        self.reported_phase = reported_phase
 
 
 class Agent:
     def __init__(self, agent_id: str, role: str, system_prompt: str,
-                 sandbox: Sandbox, llm) -> None:
+                 sandbox: Sandbox, llm, tools: list | None = None) -> None:
         self.agent_id = agent_id
         self.role = role
         self.sandbox = sandbox
         self.llm = llm
+        self.tools = tools or [SHELL_TOOL]
         self.messages: list = [{"role": "system", "content": system_prompt}]
 
     def set_objective(self, objective: str) -> None:
-        """The director calls this at a phase boundary to steer a resident.
-
-        Delivered as a system message so it reads as an environment change, not
-        as something another agent said.
-        """
         self.messages.append(
-            {"role": "system", "content": f"Your objective is now:\n{objective}"}
+            {"role": "system", "content": f"Your goal is now:\n{objective}"}
         )
 
     def take_turn(self) -> TurnResult:
-        msg = self.llm.chat(self.messages, tools=[SHELL_TOOL])
-        self.messages.append(msg)  # assistant turn, carries any tool_calls
+        msg = self.llm.chat(self.messages, tools=self.tools)
+        self.messages.append(msg)
 
         actions: list[Action] = []
+        reported_phase: str | None = None
         for tc in (msg.tool_calls or []):
-            tool_msg, full_output, code = execute(tc, self.sandbox)
-            self.messages.append(tool_msg)  # every tool_call needs a reply
-            actions.append(
-                Action(command=parse(tc), output=full_output, exit_code=code)
-            )
+            if tc.function.name == "record":
+                tool_msg, phase, _note = record_capture(tc)
+                self.messages.append(tool_msg)
+                reported_phase = phase  # last assessment of the turn wins
+            else:  # run_shell
+                tool_msg, full_output, code = execute(tc, self.sandbox)
+                self.messages.append(tool_msg)
+                actions.append(Action(parse(tc), full_output, code))
 
-        return TurnResult(assistant_text=msg.content or "", actions=actions)
+        return TurnResult(msg.content or "", actions, reported_phase)

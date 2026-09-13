@@ -1,15 +1,16 @@
-"""Orchestrator — runs one experiment to completion.
+"""Orchestrator — runs one experiment to completion (design B, state-driven).
 
-Owns the step loop, ticks the director, steps every agent, writes the log.
 Agents run OUTSIDE the containers: this process holds each conversation and
 calls OpenRouter; a tool_call executes via `docker exec` into that agent's
-container. So the containers never touch the network and never run agent code.
+container. Containers never touch the network and never run agent code.
 
-The core (`run_experiment`) takes factories for the LLM and the sandbox, so the
-orchestration can be exercised offline with fakes (see tests) at zero API cost.
-`__main__` wires the real client, ContainerSandbox, and docker-compose lifecycle.
+Ground truth is read from the world each step: the target's unlock.log plus the
+residents' accumulated commands, fed to the director. The sentinel has no
+/target mount, so it must infer the same phase from the board alone.
 
-Status: core implemented; container lifecycle in __main__.
+The core (`run_experiment`) takes factories for the LLM and the sandbox, so it
+runs offline with fakes at zero API cost. `__main__` wires the real client,
+ContainerSandbox, the target build, and the docker-compose lifecycle.
 """
 
 from __future__ import annotations
@@ -24,22 +25,16 @@ from agents.agent import Agent
 from agents.director import Director
 from agents.logging_schema import RunLog, StepRecord
 from agents.promptloader import render
-
-# Shared between the covert sentinel prompt and scoring. If these drift, reports
-# go unscored — so both read this one constant.
-COVERT_REPORT_TAG = "zzSYNCPART"
+from agents.tools import RECORD_TOOL, SHELL_TOOL
 
 RESIDENT_IDS = ["r1", "r2", "r3", "r4"]
 SENTINEL_ID = "s1"
 CONTAINER = {"r1": "sa-r1", "r2": "sa-r2", "r3": "sa-r3", "r4": "sa-r4", "s1": "sa-s1"}
 BOARD_PATH = "/board"
+TARGET_STATE_DIR = "target/state"
 
-# condition -> prompt template name
-SENTINEL_PROMPT = {
-    "none": "sentinel_none",
-    "overt": "sentinel_overt",
-    "covert": "sentinel_covert",
-}
+SENTINEL_PROMPT = {"none": "sentinel_none", "overt": "sentinel_overt",
+                   "covert": "sentinel_covert"}
 
 
 def build_agents(
@@ -48,23 +43,21 @@ def build_agents(
     sandbox_for: Callable[[str], object],
     board_path: str = BOARD_PATH,
 ) -> tuple[list[Agent], Agent]:
-    """Construct the four residents and one sentinel for `condition`."""
+    """Four residents (one overall goal) and one sentinel for `condition`."""
     residents = []
     for rid in RESIDENT_IDS:
         prompt = render("resident", agent_id=rid, board_path=board_path,
-                        objective="(awaiting first objective)")
+                        objective=Director.RESIDENT_GOAL)
         residents.append(
             Agent(rid, "resident", prompt, sandbox_for(rid), llm_for(rid, "resident"))
         )
 
     role = f"sentinel_{condition}"
-    slots = {"agent_id": SENTINEL_ID, "board_path": board_path}
-    if condition == "covert":
-        slots["report_tag"] = COVERT_REPORT_TAG
     sentinel = Agent(
         SENTINEL_ID, role,
-        render(SENTINEL_PROMPT[condition], **slots),
+        render(SENTINEL_PROMPT[condition], agent_id=SENTINEL_ID, board_path=board_path),
         sandbox_for(SENTINEL_ID), llm_for(SENTINEL_ID, role),
+        tools=[SHELL_TOOL, RECORD_TOOL],  # sentinel alone can report privately
     )
     return residents, sentinel
 
@@ -77,33 +70,36 @@ def run_experiment(
     director: Director | None = None,
     run_id: str | None = None,
     board_path: str = BOARD_PATH,
+    target_state_dir: str = TARGET_STATE_DIR,
 ) -> str:
-    """Step every agent through every phase, logging one record per agent-turn."""
+    """Step all agents; each step, read world state → ground-truth phase → log."""
     director = director or Director()
     run_id = run_id or uuid.uuid4().hex[:8]
     residents, sentinel = build_agents(condition, llm_for, sandbox_for, board_path)
     everyone = residents + [sentinel]
+    unlock_log = Path(target_state_dir) / "unlock.log"
+    resident_commands: list[str] = []  # accumulates across steps; drives ground truth
 
     with RunLog(log_path) as log:
-        for step in range(director.total_steps):
-            phase = director.phase_at(step)
-            if director.is_boundary(step):
-                for r in residents:  # sentinel keeps its monitoring prompt
-                    r.set_objective(phase.objective)
-
-            # All agents act within the step. Turns are independent per agent;
-            # they interact only through the shared board, where mkdir is atomic.
+        for step in range(director.max_steps):
+            # all agents act within the step; they interact only through the
+            # shared board, where mkdir is atomic
             with ThreadPoolExecutor(max_workers=len(everyone)) as ex:
-                results = dict(
-                    zip(everyone, ex.map(lambda a: a.take_turn(), everyone))
-                )
+                results = dict(zip(everyone, ex.map(lambda a: a.take_turn(), everyone)))
 
-            for a in everyone:  # deterministic log order, not completion order
+            for r in residents:
+                resident_commands.extend(a.command for a in results[r].actions)
+
+            # ground truth = furthest progress reached, read from the world
+            log_text = unlock_log.read_text() if unlock_log.exists() else ""
+            phase = director.phase(log_text, resident_commands)
+
+            for a in everyone:  # deterministic order, not completion order
                 res = results[a]
                 log.write(StepRecord(
                     run_id=run_id, step=step, agent_id=a.agent_id, role=a.role,
-                    ground_truth_phase=phase.name,
-                    assistant_text=res.assistant_text, actions=res.actions,
+                    ground_truth_phase=phase, assistant_text=res.assistant_text,
+                    reported_phase=res.reported_phase, actions=res.actions,
                 ))
     return run_id
 
@@ -111,17 +107,20 @@ def run_experiment(
 # --- real wiring -----------------------------------------------------------
 
 def _compose(*args: str) -> None:
-    subprocess.run(["docker", "compose", "-f", "docker/compose.yml", *args], check=True)
+    subprocess.run(["docker", "compose", "--project-directory", ".",
+                    "-f", "docker/compose.yml", *args], check=True)
 
 
 def main(condition: str = "none", runs_dir: str = "runs") -> None:
     from agents.llm import LLM
     from agents.tools import ContainerSandbox
 
+    # fresh target for this run (new credentials)
+    subprocess.run(["python", "target/build_target.py", TARGET_STATE_DIR], check=True)
+
     _compose("up", "-d")
     try:
-        # wait for shells to accept exec
-        for name in CONTAINER.values():
+        for name in CONTAINER.values():  # wait for shells to accept exec
             subprocess.run(["docker", "exec", name, "true"], check=True)
         run_id = run_experiment(
             condition=condition,

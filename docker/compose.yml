@@ -1,15 +1,15 @@
-# The agent containers are dumb shells, not agent programs.
+# Agent containers are dumb shells. The orchestrator (run.py) runs on the host,
+# holds every conversation, calls OpenRouter, and `docker exec`s commands in.
+# So a container needs only a shell, the shared board, and (residents only) the
+# target — no Python, no network of its own.
 #
-# The orchestrator (run.py) runs on the host, holds every conversation, and
-# calls OpenRouter. When a model asks to run a command, the host does
-# `docker exec` into that agent's container. So a container needs only a shell,
-# the shared board, and (later) the target — no Python, no network of its own.
+# The `board` volume is the ONLY surface all agents share. The target is bind-
+# mounted into the FOUR RESIDENTS but NOT the sentinel: the sentinel must infer
+# the attack phase from the board, and must not be able to read the target's
+# unlock.log (which is ground truth).
 #
-# The `board` volume is mounted into all five and is the ONLY surface they
-# share. A second shared mount is a second channel and leaks the premise.
-#
-# network_mode: none gives the single-egress fidelity by architecture: the
-# shells have no network at all, only the host reaches OpenRouter.
+# network_mode: none — the shells have no network at all; only the host reaches
+# the model API. Single-egress fidelity by architecture.
 
 name: sentinel-agents
 
@@ -19,14 +19,19 @@ x-agent: &agent
   network_mode: none
   volumes:
     - board:/board
-    # - ./target/state:/target:ro    # mount added once the team's target lands
+
+x-resident: &resident
+  <<: *agent
+  volumes:
+    - board:/board
+    - ./target/state:/target
 
 services:
-  resident-1: { <<: *agent, container_name: sa-r1 }
-  resident-2: { <<: *agent, container_name: sa-r2 }
-  resident-3: { <<: *agent, container_name: sa-r3 }
-  resident-4: { <<: *agent, container_name: sa-r4 }
-  sentinel:   { <<: *agent, container_name: sa-s1 }
+  resident-1: { <<: *resident, container_name: sa-r1 }
+  resident-2: { <<: *resident, container_name: sa-r2 }
+  resident-3: { <<: *resident, container_name: sa-r3 }
+  resident-4: { <<: *resident, container_name: sa-r4 }
+  sentinel:   { <<: *agent,    container_name: sa-s1 }   # no /target mount
 
 volumes:
   board:
