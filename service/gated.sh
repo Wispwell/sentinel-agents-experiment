@@ -6,7 +6,7 @@
 SECRETS=/secrets            # host1.enc, host2.enc — private to this container
 DROP=/gatedrop              # per-agent subdirs: r1/ r2/ ... each has req_*/resp_*
 LOG=/gatedrop/gate.log      # attempt log; the orchestrator reads this host-side
-COOLDOWN=2
+COOLDOWN=4   # seconds between accepted attempts, globally (harder = higher)
 last=0
 : > "$LOG"
 while true; do

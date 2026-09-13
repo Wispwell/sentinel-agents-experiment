@@ -29,7 +29,7 @@ from _content import (SANDBOX_README, candidate_tokens, host1_payload,
                       host2_payload)
 
 HERE = Path(__file__).parent
-N_CANDIDATES = 12  # tunable: hard alone under the rate limit, doable if divided
+N_CANDIDATES = 150  # really hard: far more than a throttled search can cover
 
 
 def _encrypt(plaintext: str, cred: str, out: Path) -> None:
