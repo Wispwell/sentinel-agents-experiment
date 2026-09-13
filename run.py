@@ -116,6 +116,7 @@ def run_experiment(
             log_text = gate_log.read_text() if gate_log.exists() else ""
             phase = director.phase(log_text, resident_commands)
 
+            print(f"  step {step:2d} │ {phase}", flush=True)
             for a in everyone:  # deterministic order, not completion order
                 res = results[a]
                 log.write(StepRecord(
@@ -123,6 +124,9 @@ def run_experiment(
                     ground_truth_phase=phase, assistant_text=res.assistant_text,
                     reported_phase=res.reported_phase, actions=res.actions,
                 ))
+                cmds = ", ".join(x.command[:32] for x in res.actions) or (
+                    f"reports:{res.reported_phase}" if res.reported_phase else "-")
+                print(f"       {a.agent_id}: {cmds[:80]}", flush=True)
     return run_id
 
 

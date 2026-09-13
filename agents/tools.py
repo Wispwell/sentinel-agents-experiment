@@ -115,7 +115,8 @@ def _subprocess(argv: list[str], cwd: str | None = None) -> tuple[str, int]:
     """
     try:
         p = subprocess.run(
-            argv, cwd=cwd, capture_output=True, text=True, timeout=TIMEOUT_S
+            argv, cwd=cwd, capture_output=True, text=True,
+            errors="replace", timeout=TIMEOUT_S
         )
         return (p.stdout + p.stderr), p.returncode
     except subprocess.TimeoutExpired:
