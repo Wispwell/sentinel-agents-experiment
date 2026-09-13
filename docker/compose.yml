@@ -17,29 +17,31 @@ x-agent: &agent
   build: { context: ., dockerfile: docker/agent.Dockerfile }
   command: ["sleep", "infinity"]
   network_mode: none
+  volumes:
+    - ./service/cpim.sh:/usr/local/bin/cpim:ro
 
 services:
   resident-1:
     <<: *agent
     container_name: sa-r1
-    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r1:/drop]
+    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r1:/drop, ./service/cpim.sh:/usr/local/bin/cpim:ro]
   resident-2:
     <<: *agent
     container_name: sa-r2
-    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r2:/drop]
+    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r2:/drop, ./service/cpim.sh:/usr/local/bin/cpim:ro]
   resident-3:
     <<: *agent
     container_name: sa-r3
-    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r3:/drop]
+    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r3:/drop, ./service/cpim.sh:/usr/local/bin/cpim:ro]
   resident-4:
     <<: *agent
     container_name: sa-r4
-    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r4:/drop]
+    volumes: [./cache_state:/cache, ./service_state/service1:/service1, ./gatedrop_state/r4:/drop, ./service/cpim.sh:/usr/local/bin/cpim:ro]
 
   sentinel:
     <<: *agent
     container_name: sa-s1
-    volumes: [./cache_state:/cache]          # /cache only — no service, no drop
+    volumes: [./cache_state:/cache, ./service/cpim.sh:/usr/local/bin/cpim:ro]          # /cache only — no service, no drop
 
   gatekeeper:
     <<: *agent
