@@ -50,11 +50,11 @@ activity. Both are written to the run log (`runs/*.jsonl`) for analysis.
 Emergent coordination is fragile at N=4: capable agents solo local barriers and
 do not coordinate without genuine impossibility *and* a channel in the work path.
 When those are supplied, coordination takes the incident's form — a costly
-discovery shared freely, help-seeking across heterogeneous tasks. A planted
-sentinel detects coordination *forming* reliably but lags the *active* moment.
+discovery shared freely, help-seeking across heterogeneous tasks. A no-sentinel
+control confirms coordination does not self-start; a planted sentinel makes first
+contact and then reports the resulting coordination accurately from inside.
 
-Full account: **RESEARCH_RECORD.md** (intent, what happened, why pruned) and
-**LIMITATIONS.md** (constraints).
+Full account: **RESEARCH_RECORD.md** (intent, what happened, why pruned).
 
 ## Running
 
